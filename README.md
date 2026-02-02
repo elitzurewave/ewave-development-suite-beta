@@ -68,7 +68,7 @@ Format: `username@hostname:/path/to/project (git:branch)`
 
 2. **In the chat, type:**
 ```
-/plugin marketplace add https://onlinetfs.ewave.co.il/Ewave_Online/_git/Claude-Ewave-Marketplace
+/plugin marketplace add https://github.com/elitzurewave/claude-ewave-marketplace
 ```
 
 3. **Browse and install:**
