@@ -62,31 +62,30 @@ Format: `username@hostname:/path/to/project (git:branch)`
 
 ## Installation
 
-### From Local Directory
+### From Ewave Marketplace (Recommended)
 
-1. Navigate to your Claude plugins directory:
-```bash
-cd ~/.claude/plugins
+1. **Open Claude Code**
+
+2. **In the chat, type:**
+```
+/plugin marketplace add https://onlinetfs.ewave.co.il/Ewave_Online/_git/Claude-Ewave-Marketplace
 ```
 
-2. Clone or copy this plugin:
-```bash
-cp -r /path/to/ewave-development-suite-beta ./
+3. **Browse and install:**
+```
+/plugin
 ```
 
-3. Enable the plugin:
-```bash
-claude plugins enable ewave-development-suite-beta
-```
+4. **Go to "Discover" tab** and install **ewave-development-suite-beta**
 
 ### Verification
 
-Check that the plugin is active:
-```bash
-claude plugins list
+In Claude Code chat:
+```
+/plugin
 ```
 
-You should see:
+Go to **Installed** tab - you should see:
 ```
 ✓ ewave-development-suite-beta@0.1.0-beta (enabled)
 ```
