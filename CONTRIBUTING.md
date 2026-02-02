@@ -4,7 +4,7 @@
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/ewave/ewave-development-suite-beta.git
+git clone https://github.com/elitzurewave/ewave-development-suite-beta.git
 cd ewave-development-suite-beta
 ```
 

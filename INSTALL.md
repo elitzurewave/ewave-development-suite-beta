@@ -1,145 +1,66 @@
 # Installation Guide
 
-## Method 1: Local Marketplace (Recommended)
+## Method 1: From Marketplace (Recommended)
 
-### 1. Create Local Marketplace Directory
+### 1. Add Ewave Marketplace
 
-```bash
-# Create marketplace directory if it doesn't exist
-mkdir -p ~/.claude/marketplace/local
+In Claude Code chat:
+```
+/plugin marketplace add https://github.com/elitzurewave/claude-ewave-marketplace.git
 ```
 
-### 2. Copy Plugin to Marketplace
+### 2. Install Plugin
 
-```bash
-# Copy the entire plugin directory
-cp -r /path/to/ewave-development-suite-beta ~/.claude/marketplace/local/
+```
+/plugin
 ```
 
-**For your setup:**
-```bash
-cp -r "C:\elitzur\Ewave.ai\claude-plugins\ewave-development-suite-beta" "$HOME/.claude/marketplace/local/"
+Go to **Discover** tab → Install **ewave-development-suite-beta**
+
+### 3. Verify Installation
+
+```
+/plugin
 ```
 
-### 3. Register Plugin
-
-Claude Code will automatically detect plugins in the marketplace directory. Restart Claude Code or run:
-
-```bash
-claude plugins refresh
+Go to **Installed** tab - you should see:
 ```
-
-### 4. Enable Plugin
-
-```bash
-claude plugins enable ewave-development-suite-beta
-```
-
-### 5. Verify Installation
-
-```bash
-claude plugins list
-```
-
-Expected output:
-```
-Installed Plugins:
 ✓ ewave-development-suite-beta@0.1.0-beta (enabled)
-  - 10 agents
-  - 15 skills
-  - 15 commands
-  - 9 rules
-  - Hooks enabled
 ```
 
-## Method 2: Direct Installation (Development)
-
-### 1. Copy to Plugins Directory
+## Method 2: Direct Git Installation
 
 ```bash
-cp -r /path/to/ewave-development-suite-beta ~/.claude/plugins/
+# Clone and install directly
+claude plugins install https://github.com/elitzurewave/ewave-development-suite-beta.git
 ```
 
-### 2. Update settings.json
+## Method 3: Local Development
 
-Edit `~/.claude/settings.json`:
+### 1. Clone Repository
 
-```json
-{
-  "enabledPlugins": {
-    "ewave-development-suite-beta": true
-  }
-}
+```bash
+git clone https://github.com/elitzurewave/ewave-development-suite-beta.git
+cd ewave-development-suite-beta
 ```
 
-### 3. Restart Claude Code
-
-Close and reopen Claude Code to load the plugin.
-
-## Method 3: Symlink (Best for Development)
-
-### 1. Create Symlink
+### 2. Create Symlink
 
 ```bash
 # Windows (PowerShell as Administrator)
-New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.claude\plugins\ewave-development-suite-beta" -Target "C:\elitzur\Ewave.ai\claude-plugins\ewave-development-suite-beta"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.claude\plugins\ewave-development-suite-beta" -Target "$(Get-Location)"
 
 # Linux/Mac
-ln -s /path/to/ewave-development-suite-beta ~/.claude/plugins/ewave-development-suite-beta
+ln -s "$(pwd)" ~/.claude/plugins/ewave-development-suite-beta
 ```
 
-### 2. Enable Plugin
+### 3. Enable Plugin
 
 ```bash
 claude plugins enable ewave-development-suite-beta
 ```
 
 **Benefits:** Changes to the plugin source are immediately reflected without copying.
-
-## Publishing to Team Marketplace
-
-### 1. Create Git Repository
-
-```bash
-cd C:\elitzur\Ewave.ai\claude-plugins\ewave-development-suite-beta
-git init
-git add .
-git commit -m "Initial commit: Ewave Development Suite v0.1.0-beta"
-```
-
-### 2. Push to Company Git Server
-
-```bash
-# Add remote
-git remote add origin https://github.com/ewave/ewave-development-suite-beta.git
-
-# Push
-git push -u origin main
-```
-
-### 3. Team Installation
-
-Share the repository URL with your team:
-
-```bash
-claude plugins install https://github.com/ewave/ewave-development-suite-beta.git
-```
-
-### 4. Configure Marketplace (Optional)
-
-Create `~/.claude/marketplace.json`:
-
-```json
-{
-  "sources": [
-    {
-      "name": "Ewave Internal",
-      "url": "https://github.com/ewave/claude-plugins-marketplace",
-      "priority": 1
-    }
-  ]
-}
-```
 
 ## Troubleshooting
 
@@ -155,11 +76,6 @@ ls ~/.claude/plugins/ewave-development-suite-beta/.claude-plugin/plugin.json
 cat ~/.claude/plugins/ewave-development-suite-beta/.claude-plugin/plugin.json | jq .
 ```
 
-3. Check Claude Code logs:
-```bash
-cat ~/.claude/debug/plugin-loader.log
-```
-
 ### Hooks Not Working
 
 1. Verify Node.js is installed:
@@ -167,12 +83,7 @@ cat ~/.claude/debug/plugin-loader.log
 node --version
 ```
 
-2. Test hook scripts manually:
-```bash
-node ~/.claude/plugins/ewave-development-suite-beta/scripts/hooks/session-start.js
-```
-
-3. Check hook permissions:
+2. Check hook permissions (Linux/Mac):
 ```bash
 chmod +x ~/.claude/plugins/ewave-development-suite-beta/scripts/hooks/*.js
 ```
@@ -184,56 +95,42 @@ chmod +x ~/.claude/plugins/ewave-development-suite-beta/scripts/hooks/*.js
 ls ~/.claude/plugins/ewave-development-suite-beta/agents/
 ```
 
-2. Check plugin.json agent paths are correct
-
-3. Restart Claude Code with debug flag:
-```bash
-claude --debug
-```
+2. Restart Claude Code
 
 ## Updating the Plugin
 
-### From Local Source
-
-```bash
-# Pull latest changes
-cd C:\elitzur\Ewave.ai\claude-plugins\ewave-development-suite-beta
-git pull
-
-# If using symlink, changes are automatic
-# If using copy, recopy:
-cp -r . ~/.claude/plugins/ewave-development-suite-beta/
-
-# Reload plugins
-claude plugins reload ewave-development-suite-beta
+In Claude Code chat:
+```
+/plugin
 ```
 
-### From Git Repository
+Go to **Installed** tab → Click plugin → Click **Update**
 
+Or via CLI:
 ```bash
 claude plugins update ewave-development-suite-beta
 ```
 
 ## Uninstalling
 
+In Claude Code chat:
+```
+/plugin
+```
+
+Go to **Installed** tab → Click plugin → Click **Uninstall**
+
+Or via CLI:
 ```bash
-# Disable plugin
-claude plugins disable ewave-development-suite-beta
-
-# Remove plugin
 claude plugins uninstall ewave-development-suite-beta
-
-# Or manually delete
-rm -rf ~/.claude/plugins/ewave-development-suite-beta
 ```
 
 ## Next Steps
 
 1. Read [README.md](./README.md) for usage guide
-2. Customize rules in [rules/](./rules/) directory
-3. Explore agents in [agents/](./agents/) directory
-4. Test commands: `/plan`, `/code-review`, `/tdd`
+2. Explore agents in [agents/](./agents/) directory
+3. Test commands: `/plan`, `/code-review`, `/tdd`
 
 ## Support
 
-For issues or questions, contact the Ewave development team or create an issue in the plugin repository.
+For issues, create an issue in the [plugin repository](https://github.com/elitzurewave/ewave-development-suite-beta).
