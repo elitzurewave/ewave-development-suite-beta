@@ -187,9 +187,13 @@ Override plugin defaults:
 
 This is an internal Ewave plugin. For issues or suggestions, contact the development team.
 
+## Credits
+
+Based on [Everything Claude Code](https://github.com/affaan-m/everything-claude-code) by Affaan M, with additional .NET Core patterns, enterprise workflows, and custom agents.
+
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) for details.
 
 ## Changelog
 
