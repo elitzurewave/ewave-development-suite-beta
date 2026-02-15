@@ -7,6 +7,10 @@
  * user's ~/.claude/settings.json, replacing {{PLUGIN_DIR}} with
  * the actual installed plugin path.
  *
+ * All hooks from hooks.json are installed. Plugin hooks are tracked
+ * by their description field - on re-install, old plugin hooks are
+ * removed before new ones are added.
+ *
  * Usage: node install-hooks.js <plugin-install-path>
  */
 
@@ -61,20 +65,33 @@ if (!settings.hooks) {
 // Convert plugin path to platform-specific format for use in commands
 const pluginPathForCmd = resolvedPluginDir.replace(/\//g, path.sep);
 
-// Marker to identify hooks added by this plugin
-const PLUGIN_MARKER = 'ewave-security-gate';
+// Collect all plugin hook descriptions for identification
+const pluginDescriptions = new Set();
+for (const hooks of Object.values(pluginHooks)) {
+  if (!Array.isArray(hooks)) continue;
+  for (const hook of hooks) {
+    if (hook.description) {
+      pluginDescriptions.add(hook.description);
+    }
+  }
+}
 
-// Remove any previously installed security gate hooks
+// Remove any previously installed plugin hooks (identified by description)
 for (const hookType of Object.keys(settings.hooks)) {
   if (Array.isArray(settings.hooks[hookType])) {
-    settings.hooks[hookType] = settings.hooks[hookType].filter(hook =>
-      !(hook.description && hook.description.includes('SECURITY GATE')) &&
-      !(hook.description && hook.description.includes('TAMPER PROTECTION'))
-    );
+    settings.hooks[hookType] = settings.hooks[hookType].filter(hook => {
+      if (!hook.description) return true;
+      // Remove if description matches any plugin hook description
+      if (pluginDescriptions.has(hook.description)) return false;
+      // Also remove legacy hooks with old-style descriptions
+      if (hook.description.includes('SECURITY GATE') || hook.description.includes('TAMPER PROTECTION')) return false;
+      return true;
+    });
   }
 }
 
 // Process each hook type from the plugin
+let totalAdded = 0;
 for (const [hookType, hooks] of Object.entries(pluginHooks)) {
   if (!Array.isArray(hooks)) continue;
 
@@ -83,12 +100,6 @@ for (const [hookType, hooks] of Object.entries(pluginHooks)) {
   }
 
   for (const hook of hooks) {
-    // Only merge security gate hooks (not all plugin hooks, to avoid duplicates)
-    const desc = hook.description || '';
-    if (!desc.includes('SECURITY GATE') && !desc.includes('TAMPER PROTECTION')) {
-      continue;
-    }
-
     // Deep clone the hook
     const newHook = JSON.parse(JSON.stringify(hook));
 
@@ -101,42 +112,35 @@ for (const [hookType, hooks] of Object.entries(pluginHooks)) {
       }
     }
 
-    // Add at the BEGINNING of the array (security hooks should run first)
-    settings.hooks[hookType].unshift(newHook);
-  }
-}
-
-// Also update the doc blocker to exclude plugin directories
-const preToolUse = settings.hooks.PreToolUse || [];
-for (const hook of preToolUse) {
-  if (hook.matcher && hook.matcher.includes('.md|txt') && hook.matcher.includes('CONTRIBUTING')) {
-    // This is the doc blocker - update matcher to exclude plugin dirs
-    if (!hook.matcher.includes('agents|skills|commands|rules')) {
-      hook.matcher = hook.matcher.replace(
-        'CONTRIBUTING\\\\.md',
-        'CONTRIBUTING\\\\.md|(agents|skills|commands|rules)[/\\\\\\\\]'
-      );
-      console.log('Updated doc blocker to exclude plugin directories.');
+    // Security-critical hooks go at the beginning, others at the end
+    const desc = newHook.description || '';
+    if (desc.includes('SECURITY GATE') || desc.includes('TAMPER PROTECTION')) {
+      settings.hooks[hookType].unshift(newHook);
+    } else {
+      settings.hooks[hookType].push(newHook);
     }
+
+    totalAdded++;
   }
 }
 
 // Write updated settings
 try {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
-  console.log('Security gate hooks merged into settings.json successfully.');
+  console.log('Plugin hooks merged into settings.json successfully.');
+  console.log(`${totalAdded} hook(s) installed across ${Object.keys(pluginHooks).length} event types.`);
 
-  // Count hooks added
-  let count = 0;
+  // Count security-specific hooks
+  let secCount = 0;
   for (const hookType of Object.keys(settings.hooks)) {
     for (const hook of settings.hooks[hookType]) {
       const desc = hook.description || '';
       if (desc.includes('SECURITY GATE') || desc.includes('TAMPER PROTECTION')) {
-        count++;
+        secCount++;
       }
     }
   }
-  console.log(`${count} security gate hook(s) installed.`);
+  console.log(`${secCount} security gate hook(s) active.`);
 } catch (err) {
   console.error('Failed to write settings.json:', err.message);
   process.exit(1);

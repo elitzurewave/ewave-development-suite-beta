@@ -1,47 +1,47 @@
 {
   "PreToolUse": [
     {
-      "matcher": "tool == \"Write\" && tool_input.file_path matches \"security-gate|security-patterns|security-gate-config|plugin-security|security-scan\"",
+      "matcher": "Write",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"console.error('[SECURITY GATE] BLOCKED: Attempt to modify security gate component.');console.error('[SECURITY GATE] These files are tamper-protected. Manual edit required.');process.exit(1)\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=(JSON.parse(d).tool_input||{}).file_path||'';if(/security-gate|security-patterns|security-gate-config|plugin-security|security-scan/.test(p)){console.error('[SECURITY GATE] BLOCKED: Attempt to modify security gate component.');console.error('[SECURITY GATE] These files are tamper-protected. Manual edit required.');process.exit(1)}console.log(d)})\""
         }
       ],
       "description": "TAMPER PROTECTION: Block modification of security gate files"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"security-gate|security-patterns|security-gate-config|plugin-security|security-scan\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"console.error('[SECURITY GATE] BLOCKED: Attempt to modify security gate component.');console.error('[SECURITY GATE] These files are tamper-protected. Manual edit required.');process.exit(1)\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=(JSON.parse(d).tool_input||{}).file_path||'';if(/security-gate|security-patterns|security-gate-config|plugin-security|security-scan/.test(p)){console.error('[SECURITY GATE] BLOCKED: Attempt to modify security gate component.');console.error('[SECURITY GATE] These files are tamper-protected. Manual edit required.');process.exit(1)}console.log(d)})\""
         }
       ],
       "description": "TAMPER PROTECTION: Block editing of security gate files"
     },
     {
-      "matcher": "tool == \"Write\" && tool_input.file_path matches \"hooks[/\\\\\\\\]hooks\\\\.json$\"",
+      "matcher": "Write",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const content=i.tool_input?.content||'';try{const parsed=JSON.parse(content);const pre=parsed.PreToolUse||[];const matchers=pre.map(h=>h.matcher||'');const required=['security-gate','security-patterns','security-gate-config'];const allPresent=required.every(req=>matchers.some(m=>m.includes(req)));if(!allPresent){console.error('[SECURITY GATE] BLOCKED: Required security gate hooks missing from new hooks.json.');console.error('[SECURITY GATE] The tamper protection, pattern protection, and config protection hooks must be preserved.');process.exit(1)}}catch(e){console.error('[SECURITY GATE] BLOCKED: Invalid JSON for hooks.json');process.exit(1)}console.log(d)})\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path||'';if(!/hooks[/\\\\]hooks\\.json$/.test(p)){console.log(d);return}const content=i.tool_input?.content||'';try{const parsed=JSON.parse(content);const pre=parsed.PreToolUse||[];const descs=pre.map(h=>(h.description||'')+(h.matcher||''));const required=['security-gate','security-patterns','security-gate-config'];const allPresent=required.every(req=>descs.some(s=>s.includes(req)));if(!allPresent){console.error('[SECURITY GATE] BLOCKED: Required security gate hooks missing from new hooks.json.');console.error('[SECURITY GATE] The tamper protection, pattern protection, and config protection hooks must be preserved.');process.exit(1)}}catch(e){console.error('[SECURITY GATE] BLOCKED: Invalid JSON for hooks.json');process.exit(1)}console.log(d)})\""
         }
       ],
       "description": "TAMPER PROTECTION: Ensure security gate hooks are not removed from hooks.json"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"hooks[/\\\\\\\\]hooks\\\\.json$\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const old=i.tool_input?.old_string||'';if(old.includes('security-gate')||old.includes('security-patterns')||old.includes('TAMPER PROTECTION')){console.error('[SECURITY GATE] BLOCKED: Cannot edit security gate entries in hooks.json.');console.error('[SECURITY GATE] These entries are tamper-protected. Manual edit required.');process.exit(1)}console.log(d)})\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path||'';if(!/hooks[/\\\\]hooks\\.json$/.test(p)){console.log(d);return}const old=i.tool_input?.old_string||'';if(old.includes('security-gate')||old.includes('security-patterns')||old.includes('TAMPER PROTECTION')){console.error('[SECURITY GATE] BLOCKED: Cannot edit security gate entries in hooks.json.');console.error('[SECURITY GATE] These entries are tamper-protected. Manual edit required.');process.exit(1)}console.log(d)})\""
         }
       ],
       "description": "TAMPER PROTECTION: Block editing of security gate entries in hooks.json"
     },
     {
-      "matcher": "tool == \"Write\" && tool_input.file_path matches \"(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "matcher": "Write",
       "hooks": [
         {
           "type": "command",
@@ -51,7 +51,7 @@
       "description": "SECURITY GATE: Auto-scan Write to plugin directories"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
@@ -61,37 +61,37 @@
       "description": "SECURITY GATE: Auto-scan Edit to plugin directories"
     },
     {
-      "matcher": "tool == \"Bash\" && tool_input.command matches \"(cp|mv|curl|wget|git\\\\s+clone).*?(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const cmd=(JSON.parse(d).tool_input||{}).command||'';console.error('[SECURITY GATE] WARNING: File operation targeting protected plugin directory detected.');console.error('[SECURITY GATE] Command: '+cmd.substring(0,120));console.error('[SECURITY GATE] Content will be scanned after operation completes.');console.log(d)})\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const cmd=(JSON.parse(d).tool_input||{}).command||'';if(/(cp|mv|curl|wget|git\\s+clone)/.test(cmd)&&/(skills|agents|commands|rules|hooks|scripts)[/\\\\]/.test(cmd)){console.error('[SECURITY GATE] WARNING: File operation targeting protected plugin directory detected.');console.error('[SECURITY GATE] Command: '+cmd.substring(0,120));console.error('[SECURITY GATE] Content will be scanned after operation completes.')}console.log(d)})\""
         }
       ],
       "description": "SECURITY GATE: Warn before Bash file operations targeting plugin directories"
     },
     {
-      "matcher": "tool == \"Bash\" && tool_input.command matches \"git push\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"console.error('[Hook] Review changes before push...');console.error('[Hook] Continuing with push (remove this hook to add interactive review)')\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const cmd=(JSON.parse(d).tool_input||{}).command||'';if(/git\\s+push/.test(cmd)){console.error('[Hook] Review changes before push...');console.error('[Hook] Continuing with push (remove this hook to add interactive review)')}console.log(d)})\""
         }
       ],
       "description": "Reminder before git push to review changes"
     },
     {
-      "matcher": "tool == \"Write\" && tool_input.file_path matches \"\\\\.(md|txt)$\" && !(tool_input.file_path matches \"README\\\\.md|CLAUDE\\\\.md|AGENTS\\\\.md|CONTRIBUTING\\\\.md|(agents|skills|commands|rules)[/\\\\\\\\]\")",
+      "matcher": "Write",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"const fs=require('fs');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path||'';if(/\\.(md|txt)$/.test(p)&&!/(README|CLAUDE|AGENTS|CONTRIBUTING)\\.md$/.test(p)&&!/(agents|skills|commands|rules)[/\\\\]/.test(p)){console.error('[Hook] BLOCKED: Unnecessary documentation file creation');console.error('[Hook] File: '+p);console.error('[Hook] Use README.md for documentation instead');process.exit(1)}console.log(d)})\""
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path||'';if(/\\.(md|txt)$/.test(p)&&!/(README|CLAUDE|AGENTS|CONTRIBUTING)\\.md$/.test(p)&&!/(agents|skills|commands|rules)[/\\\\]/.test(p)){console.error('[Hook] BLOCKED: Unnecessary documentation file creation');console.error('[Hook] File: '+p);console.error('[Hook] Use README.md for documentation instead');process.exit(1)}console.log(d)})\""
         }
       ],
       "description": "Block creation of random .md files - keeps docs consolidated (excludes plugin dirs)"
     },
     {
-      "matcher": "tool == \"Edit\" || tool == \"Write\"",
+      "matcher": "Write|Edit",
       "hooks": [
         {
           "type": "command",
@@ -127,11 +127,11 @@
   ],
   "PostToolUse": [
     {
-      "matcher": "tool == \"Bash\" && tool_input.command matches \"(cp|mv|curl|wget|git\\\\s+clone).*?(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const cmd=(i.tool_input||{}).command||'';const m=cmd.match(/(?:skills|agents|commands|rules|hooks|scripts)[/\\\\][^\\s'\\\"]+/);if(m){const{execFileSync}=require('child_process');const p=require('path');try{const pluginDir=p.resolve(__dirname||'.','..','..') ;execFileSync('node',[p.join(pluginDir,'scripts','hooks','security-gate.js'),'--check-path',m[0]],{stdio:'inherit'})}catch(e){console.error('[SECURITY GATE] Post-scan failed: '+e.message)}}console.log(d)})\"",
+          "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const cmd=(i.tool_input||{}).command||'';if(/(cp|mv|curl|wget|git\\s+clone)/.test(cmd)&&/(skills|agents|commands|rules|hooks|scripts)[/\\\\]/.test(cmd)){const m=cmd.match(/(?:skills|agents|commands|rules|hooks|scripts)[/\\\\][^\\s'\\\"]+/);if(m){const{execFileSync}=require('child_process');try{execFileSync('node',['{{PLUGIN_DIR}}/scripts/hooks/security-gate.js','--check-path',m[0]],{stdio:'inherit'})}catch(e){console.error('[SECURITY GATE] Post-scan failed: '+e.message)}}}console.log(d)})\"",
           "async": true,
           "timeout": 10
         }
@@ -139,7 +139,7 @@
       "description": "SECURITY GATE: Post-scan files after Bash copies them to plugin directories"
     },
     {
-      "matcher": "tool == \"Bash\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
@@ -149,7 +149,7 @@
       "description": "Log PR URL and provide review command after PR creation"
     },
     {
-      "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm run build|pnpm build|yarn build)\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
@@ -161,31 +161,31 @@
       "description": "Async hook for build analysis (runs in background)"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(ts|tsx|js|jsx)$\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"const{execSync}=require('child_process');const fs=require('fs');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&fs.existsSync(p)){try{execSync('npx prettier --write \"'+p+'\"',{stdio:['pipe','pipe','pipe']})}catch(e){}}console.log(d)})\""
+          "command": "node -e \"const{execSync}=require('child_process');const fs=require('fs');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&/\\.(ts|tsx|js|jsx)$/.test(p)&&fs.existsSync(p)){try{execSync('npx prettier --write \"'+p+'\"',{stdio:['pipe','pipe','pipe']})}catch(e){}}console.log(d)})\""
         }
       ],
       "description": "Auto-format JS/TS files with Prettier after edits"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(ts|tsx)$\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"const{execSync}=require('child_process');const fs=require('fs');const path=require('path');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&fs.existsSync(p)){let dir=path.dirname(p);while(dir!==path.dirname(dir)&&!fs.existsSync(path.join(dir,'tsconfig.json'))){dir=path.dirname(dir)}if(fs.existsSync(path.join(dir,'tsconfig.json'))){try{const r=execSync('npx tsc --noEmit --pretty false 2>&1',{cwd:dir,encoding:'utf8',stdio:['pipe','pipe','pipe']});const lines=r.split('\\n').filter(l=>l.includes(p)).slice(0,10);if(lines.length)console.error(lines.join('\\n'))}catch(e){const lines=(e.stdout||'').split('\\n').filter(l=>l.includes(p)).slice(0,10);if(lines.length)console.error(lines.join('\\n'))}}}console.log(d)})\""
+          "command": "node -e \"const{execSync}=require('child_process');const fs=require('fs');const path=require('path');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&/\\.(ts|tsx)$/.test(p)&&fs.existsSync(p)){let dir=path.dirname(p);while(dir!==path.dirname(dir)&&!fs.existsSync(path.join(dir,'tsconfig.json'))){dir=path.dirname(dir)}if(fs.existsSync(path.join(dir,'tsconfig.json'))){try{const r=execSync('npx tsc --noEmit --pretty false 2>&1',{cwd:dir,encoding:'utf8',stdio:['pipe','pipe','pipe']});const lines=r.split('\\n').filter(l=>l.includes(p)).slice(0,10);if(lines.length)console.error(lines.join('\\n'))}catch(e){const lines=(e.stdout||'').split('\\n').filter(l=>l.includes(p)).slice(0,10);if(lines.length)console.error(lines.join('\\n'))}}}console.log(d)})\""
         }
       ],
       "description": "TypeScript check after editing .ts/.tsx files"
     },
     {
-      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(ts|tsx|js|jsx)$\"",
+      "matcher": "Edit",
       "hooks": [
         {
           "type": "command",
-          "command": "node -e \"const fs=require('fs');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&fs.existsSync(p)){const c=fs.readFileSync(p,'utf8');const lines=c.split('\\n');const matches=[];lines.forEach((l,idx)=>{if(/console\\.log/.test(l))matches.push((idx+1)+': '+l.trim())});if(matches.length){console.error('[Hook] WARNING: console.log found in '+p);matches.slice(0,5).forEach(m=>console.error(m));console.error('[Hook] Remove console.log before committing')}}console.log(d)})\""
+          "command": "node -e \"const fs=require('fs');let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const p=i.tool_input?.file_path;if(p&&/\\.(ts|tsx|js|jsx)$/.test(p)&&fs.existsSync(p)){const c=fs.readFileSync(p,'utf8');const lines=c.split('\\n');const matches=[];lines.forEach((l,idx)=>{if(/console\\.log/.test(l))matches.push((idx+1)+': '+l.trim())});if(matches.length){console.error('[Hook] WARNING: console.log found in '+p);matches.slice(0,5).forEach(m=>console.error(m));console.error('[Hook] Remove console.log before committing')}}console.log(d)})\""
         }
       ],
       "description": "Warn about console.log statements after edits"
