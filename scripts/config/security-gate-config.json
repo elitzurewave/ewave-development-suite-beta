@@ -1,0 +1,31 @@
+{
+  "blockOnSeverity": "CRITICAL",
+  "warnOnSeverity": "HIGH",
+  "auditLogPath": "logs/security-audit.jsonl",
+  "whitelistedUrls": [
+    "github.com",
+    "owasp.org",
+    "nodejs.org",
+    "developer.mozilla.org",
+    "nextjs.org",
+    "supabase.com",
+    "learn.microsoft.com",
+    "npmjs.com",
+    "typescriptlang.org",
+    "reactjs.org",
+    "react.dev"
+  ],
+  "allowBashInAgents": [
+    "build-error-resolver",
+    "code-reviewer",
+    "e2e-runner",
+    "security-reviewer",
+    "tdd-guide",
+    "refactor-cleaner",
+    "database-reviewer",
+    "doc-updater",
+    "security-gate"
+  ],
+  "maxToolsPerAgent": 6,
+  "allowedPatterns": []
+}

@@ -1,6 +1,7 @@
 {
   "name": "ewave-development-suite-beta",
-  "description": "Ewave enterprise .NET development workflow with TDD, security review, code quality, and multi-agent orchestration patterns",
+  "version": "0.2.0-beta",
+  "description": "Ewave enterprise .NET development workflow with TDD, security review, code quality, multi-agent orchestration, and plugin security gate",
   "author": {
     "name": "Ewave",
     "email": "devops@ewave.co.il"
