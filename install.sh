@@ -127,15 +127,28 @@ case $METHOD in
     ;;
 esac
 
+# Merge security gate hooks into settings.json
+echo ""
+info "Installing security gate hooks..."
+INSTALL_HOOKS_SCRIPT="$TARGET_DIR/scripts/install-hooks.js"
+if [ -f "$INSTALL_HOOKS_SCRIPT" ]; then
+  if node "$INSTALL_HOOKS_SCRIPT" "$TARGET_DIR"; then
+    success "✓ Security gate hooks installed"
+  else
+    warning "Failed to install hooks automatically. You may need to merge hooks manually."
+  fi
+else
+  warning "Hook installer not found, skipping hook merge"
+fi
+
 echo ""
 info "=========================================="
 success "Installation Complete!"
 info "=========================================="
 echo ""
 info "Next steps:"
-info "1. Restart Claude Code or run: claude plugins refresh"
-info "2. Enable the plugin: claude plugins enable $PLUGIN_NAME"
-info "3. Verify: claude plugins list"
+info "1. Restart Claude Code to activate security gate hooks"
+info "2. Verify: Start a new Claude session and try creating an agent"
 echo ""
 info "Usage:"
 info "- Agents: 'Use planner agent for authentication system'"

@@ -101,15 +101,29 @@ switch ($Method) {
     }
 }
 
+# Merge security gate hooks into settings.json
+Write-Info ""
+Write-Info "Installing security gate hooks..."
+try {
+    $installHooksScript = "$TARGET_DIR\scripts\install-hooks.js"
+    if (Test-Path $installHooksScript) {
+        node $installHooksScript $TARGET_DIR
+        Write-Success "✓ Security gate hooks installed"
+    } else {
+        Write-Warning "Hook installer not found, skipping hook merge"
+    }
+} catch {
+    Write-Warning "Failed to install hooks: $_"
+}
+
 Write-Info ""
 Write-Info "=========================================="
 Write-Success "Installation Complete!"
 Write-Info "=========================================="
 Write-Info ""
 Write-Info "Next steps:"
-Write-Info "1. Restart Claude Code or run: claude plugins refresh"
-Write-Info "2. Enable the plugin: claude plugins enable $PLUGIN_NAME"
-Write-Info "3. Verify: claude plugins list"
+Write-Info "1. Restart Claude Code to activate security gate hooks"
+Write-Info "2. Verify: Start a new Claude session and try creating an agent"
 Write-Info ""
 Write-Info "Usage:"
 Write-Info "- Agents: 'Use planner agent for authentication system'"
