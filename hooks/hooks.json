@@ -41,14 +41,24 @@
       "description": "TAMPER PROTECTION: Block editing of security gate entries in hooks.json"
     },
     {
-      "matcher": "(tool == \"Write\" || tool == \"Edit\") && tool_input.file_path matches \"(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "matcher": "tool == \"Write\" && tool_input.file_path matches \"(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
       "hooks": [
         {
           "type": "command",
           "command": "node \"{{PLUGIN_DIR}}/scripts/hooks/security-gate.js\""
         }
       ],
-      "description": "SECURITY GATE: Auto-scan content written to plugin directories"
+      "description": "SECURITY GATE: Auto-scan Write to plugin directories"
+    },
+    {
+      "matcher": "tool == \"Edit\" && tool_input.file_path matches \"(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"{{PLUGIN_DIR}}/scripts/hooks/security-gate.js\""
+        }
+      ],
+      "description": "SECURITY GATE: Auto-scan Edit to plugin directories"
     },
     {
       "matcher": "tool == \"Bash\" && tool_input.command matches \"(cp|mv|curl|wget|git\\\\s+clone).*?(skills|agents|commands|rules|hooks|scripts)[/\\\\\\\\]\"",
