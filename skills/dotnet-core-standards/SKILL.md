@@ -1,34 +1,17 @@
 ---
 name: dotnet-core-standards
-description: .NET Core coding standards, best practices, and patterns for C# development including ASP.NET Core Web API, Entity Framework Core, and clean architecture.
+description: .NET Core code patterns and examples for ASP.NET Core Web API, Entity Framework Core, and clean architecture. Use as a reference cookbook alongside rules/dotnet-core.md.
 ---
 
-# .NET Core Coding Standards & Best Practices
+# .NET Core Code Patterns
 
-Coding standards for .NET Core / ASP.NET Core projects.
+Reference cookbook for `rules/dotnet-core.md`. All mandatory rules are defined there.
+This skill provides copy-paste-ready code examples.
 
-## Project Detection
-
-This skill applies when the project contains:
-- `*.csproj` files
-- `*.sln` files
-- `appsettings.json`
-- `Program.cs` or `Startup.cs`
-- Directories like `Controllers/`, `Services/`, `Models/`
-
-## Code Quality Principles
-
-### 1. Follow Microsoft Naming Conventions
-- **PascalCase** for classes, methods, properties, public fields
-- **camelCase** for local variables, parameters
-- **_camelCase** for private fields (with underscore prefix)
-- **IPascalCase** for interfaces (prefix with I)
-- **UPPER_CASE** only for constants
-
-### 2. Async/Await Best Practices
+## Async/Await
 
 ```csharp
-// GOOD: Proper async naming and pattern
+// GOOD: Proper async naming and CancellationToken
 public async Task<User> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
 {
     return await _context.Users
@@ -38,14 +21,14 @@ public async Task<User> GetUserByIdAsync(int id, CancellationToken cancellationT
 // BAD: Blocking async calls
 public User GetUserById(int id)
 {
-    return _context.Users.FirstOrDefaultAsync(u => u.Id == id).Result; // NEVER DO THIS
+    return _context.Users.FirstOrDefaultAsync(u => u.Id == id).Result; // NEVER
 }
 ```
 
-### 3. Dependency Injection
+## Dependency Injection
 
 ```csharp
-// GOOD: Constructor injection
+// GOOD: Constructor injection with null guards
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
@@ -58,7 +41,7 @@ public class UserService : IUserService
     }
 }
 
-// BAD: Service locator pattern
+// BAD: Service locator
 public class UserService
 {
     public void DoSomething()
@@ -68,9 +51,7 @@ public class UserService
 }
 ```
 
-## ASP.NET Core Web API Patterns
-
-### Controller Structure
+## Controller Pattern
 
 ```csharp
 [ApiController]
@@ -107,18 +88,13 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var user = await _userService.CreateAsync(dto, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
     }
 }
 ```
 
-### Service Layer Pattern
+## Service Layer
 
 ```csharp
 public interface IUserService
@@ -136,10 +112,7 @@ public class UserService : IUserService
     private readonly IMapper _mapper;
     private readonly ILogger<UserService> _logger;
 
-    public UserService(
-        IUserRepository repository,
-        IMapper mapper,
-        ILogger<UserService> logger)
+    public UserService(IUserRepository repository, IMapper mapper, ILogger<UserService> logger)
     {
         _repository = repository;
         _mapper = mapper;
@@ -166,7 +139,7 @@ public class UserService : IUserService
 }
 ```
 
-### Repository Pattern with EF Core
+## Repository Pattern (EF Core)
 
 ```csharp
 public interface IRepository<T> where T : class
@@ -191,40 +164,82 @@ public class Repository<T> : IRepository<T> where T : class
     }
 
     public virtual async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
-    }
+        => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
 
     public virtual async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.ToListAsync(cancellationToken);
-    }
+        => await _dbSet.ToListAsync(cancellationToken);
 
     public virtual async Task AddAsync(T entity, CancellationToken cancellationToken = default)
-    {
-        await _dbSet.AddAsync(entity, cancellationToken);
-    }
+        => await _dbSet.AddAsync(entity, cancellationToken);
 
-    public virtual void Update(T entity)
-    {
-        _dbSet.Update(entity);
-    }
+    public virtual void Update(T entity) => _dbSet.Update(entity);
 
-    public virtual void Remove(T entity)
-    {
-        _dbSet.Remove(entity);
-    }
+    public virtual void Remove(T entity) => _dbSet.Remove(entity);
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await _context.SaveChangesAsync(cancellationToken);
+}
+```
+
+## DbContext with Audit Fields
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Order> Orders => Set<Order>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        await _context.SaveChangesAsync(cancellationToken);
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = DateTime.UtcNow;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = DateTime.UtcNow;
+                    break;
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 }
 ```
 
-## Error Handling
+## Entity Configuration
 
-### Global Exception Handler Middleware
+```csharp
+public class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.ToTable("Users");
+        builder.HasKey(u => u.Id);
+
+        builder.Property(u => u.Email).IsRequired().HasMaxLength(255);
+        builder.HasIndex(u => u.Email).IsUnique();
+        builder.Property(u => u.FirstName).IsRequired().HasMaxLength(100);
+
+        builder.HasMany(u => u.Orders)
+            .WithOne(o => o.User)
+            .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+```
+
+## Global Exception Middleware
 
 ```csharp
 public class GlobalExceptionHandlerMiddleware
@@ -264,14 +279,12 @@ public class GlobalExceptionHandlerMiddleware
         };
 
         context.Response.StatusCode = statusCode;
-
-        var response = new { error = message };
-        await context.Response.WriteAsJsonAsync(response);
+        await context.Response.WriteAsJsonAsync(new { error = message });
     }
 }
 ```
 
-### Custom Exceptions
+## Custom Exceptions
 
 ```csharp
 public class NotFoundException : Exception
@@ -284,7 +297,6 @@ public class NotFoundException : Exception
 public class ValidationException : Exception
 {
     public IEnumerable<string> Errors { get; }
-
     public ValidationException(IEnumerable<string> errors) : base("Validation failed")
     {
         Errors = errors;
@@ -292,7 +304,7 @@ public class ValidationException : Exception
 }
 ```
 
-## Validation with FluentValidation
+## FluentValidation
 
 ```csharp
 public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
@@ -308,10 +320,6 @@ public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
             .NotEmpty().WithMessage("First name is required")
             .MaximumLength(100);
 
-        RuleFor(x => x.LastName)
-            .NotEmpty().WithMessage("Last name is required")
-            .MaximumLength(100);
-
         RuleFor(x => x.Password)
             .NotEmpty()
             .MinimumLength(8)
@@ -322,194 +330,13 @@ public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
 }
 ```
 
-## Entity Framework Core Patterns
-
-### DbContext Configuration
+## Options Pattern (No Hardcoded Values)
 
 ```csharp
-public class ApplicationDbContext : DbContext
-{
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Order> Orders => Set<Order>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        // Apply all configurations from assembly
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-    }
-
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        // Auto-set audit fields
-        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
-        {
-            switch (entry.State)
-            {
-                case EntityState.Added:
-                    entry.Entity.CreatedAt = DateTime.UtcNow;
-                    break;
-                case EntityState.Modified:
-                    entry.Entity.UpdatedAt = DateTime.UtcNow;
-                    break;
-            }
-        }
-
-        return await base.SaveChangesAsync(cancellationToken);
-    }
-}
-```
-
-### Entity Configuration
-
-```csharp
-public class UserConfiguration : IEntityTypeConfiguration<User>
-{
-    public void Configure(EntityTypeBuilder<User> builder)
-    {
-        builder.ToTable("Users");
-
-        builder.HasKey(u => u.Id);
-
-        builder.Property(u => u.Email)
-            .IsRequired()
-            .HasMaxLength(255);
-
-        builder.HasIndex(u => u.Email)
-            .IsUnique();
-
-        builder.Property(u => u.FirstName)
-            .IsRequired()
-            .HasMaxLength(100);
-
-        builder.HasMany(u => u.Orders)
-            .WithOne(o => o.User)
-            .HasForeignKey(o => o.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-}
-```
-
-## Project Structure (Clean Architecture)
-
-```
-src/
-├── ProjectName.API/                 # Presentation layer
-│   ├── Controllers/
-│   ├── Middleware/
-│   ├── Filters/
-│   └── Program.cs
-├── ProjectName.Application/         # Application/Business logic layer
-│   ├── DTOs/
-│   ├── Interfaces/
-│   ├── Services/
-│   ├── Validators/
-│   └── Mappings/
-├── ProjectName.Domain/              # Domain layer (entities, value objects)
-│   ├── Entities/
-│   ├── Enums/
-│   ├── Exceptions/
-│   └── Interfaces/
-├── ProjectName.Infrastructure/      # Infrastructure layer
-│   ├── Data/
-│   │   ├── Configurations/
-│   │   ├── Migrations/
-│   │   └── ApplicationDbContext.cs
-│   ├── Repositories/
-│   └── Services/
-└── ProjectName.Tests/               # Test projects
-    ├── Unit/
-    └── Integration/
-```
-
-## NO Hardcoded Values (CRITICAL)
-
-NEVER hardcode any of the following - always use configuration:
-
-### What MUST NOT be hardcoded:
-- Connection strings
-- API keys / secrets / tokens
-- URLs (API endpoints, base URLs)
-- Credentials (usernames, passwords)
-- Magic numbers (timeouts, limits, thresholds)
-- File paths
-- Email addresses
-- Feature flags
-
-### BAD Examples (NEVER DO THIS):
-
-```csharp
-// WRONG: Hardcoded connection string
-var connectionString = "Server=myserver;Database=mydb;User=admin;Password=secret123;";
-
-// WRONG: Hardcoded API key
-var apiKey = "sk-1234567890abcdef";
-
-// WRONG: Hardcoded URL
-var apiUrl = "https://api.example.com/v1";
-
-// WRONG: Magic numbers
-if (retryCount > 3) { }
-await Task.Delay(5000);
-
-// WRONG: Hardcoded paths
-var logPath = "C:\\Logs\\app.log";
-
-// WRONG: Hardcoded email
-var adminEmail = "admin@company.com";
-```
-
-### GOOD Examples (DO THIS):
-
-```csharp
-// GOOD: Connection string from configuration
-var connectionString = _configuration.GetConnectionString("DefaultConnection");
-
-// GOOD: API key from configuration/secrets
-var apiKey = _configuration["ExternalApi:ApiKey"];
-
-// GOOD: URL from configuration
-var apiUrl = _options.Value.BaseUrl;
-
-// GOOD: Named constants for magic numbers
-private const int MaxRetryCount = 3;
-private const int RetryDelayMs = 5000;
-
-if (retryCount > MaxRetryCount) { }
-await Task.Delay(RetryDelayMs);
-
-// GOOD: Path from configuration
-var logPath = _configuration["Logging:FilePath"];
-
-// GOOD: Email from configuration
-var adminEmail = _options.Value.AdminEmail;
-```
-
-### Where to Store Configuration:
-
-| Environment | Storage Method |
-|-------------|----------------|
-| Local Dev | `appsettings.Development.json` + User Secrets |
-| Testing | `appsettings.Testing.json` |
-| Production | Environment variables / Azure Key Vault / AWS Secrets Manager |
-
-```bash
-# User Secrets for local development (NEVER commit these)
-dotnet user-secrets set "ExternalApi:ApiKey" "your-api-key"
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "your-conn-string"
-```
-
-## Configuration & Options Pattern
-
-```csharp
-// appsettings.json section
+// Settings class
 public class JwtSettings
 {
     public const string SectionName = "JwtSettings";
-
     public string Secret { get; set; } = string.Empty;
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
@@ -520,11 +347,10 @@ public class JwtSettings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection(JwtSettings.SectionName));
 
-// Usage with IOptions
+// Usage via IOptions
 public class TokenService
 {
     private readonly JwtSettings _jwtSettings;
-
     public TokenService(IOptions<JwtSettings> jwtSettings)
     {
         _jwtSettings = jwtSettings.Value;
@@ -532,42 +358,33 @@ public class TokenService
 }
 ```
 
-## Logging Best Practices
+```csharp
+// BAD: Hardcoded values
+var connectionString = "Server=myserver;Database=mydb;User=admin;Password=secret123;";
+var apiKey = "sk-1234567890abcdef";
+if (retryCount > 3) { }
+
+// GOOD: Configuration-driven
+var connectionString = _configuration.GetConnectionString("DefaultConnection");
+var apiKey = _configuration["ExternalApi:ApiKey"];
+private const int MaxRetryCount = 3;
+```
+
+| Environment | Storage Method |
+|-------------|----------------|
+| Local Dev | `appsettings.Development.json` + User Secrets |
+| Testing | `appsettings.Testing.json` |
+| Production | Environment variables / Azure Key Vault / AWS Secrets Manager |
+
+## Structured Logging
 
 ```csharp
-// GOOD: Structured logging with proper log levels
+// GOOD: Structured logging with message templates
 _logger.LogInformation("User {UserId} logged in from {IpAddress}", userId, ipAddress);
 _logger.LogWarning("Failed login attempt for user {Email}", email);
 _logger.LogError(exception, "Error processing order {OrderId}", orderId);
 
-// BAD: String concatenation in logs
-_logger.LogInformation("User " + userId + " logged in"); // AVOID
-_logger.LogInformation($"User {userId} logged in"); // AVOID - no structured data
+// BAD: String concatenation/interpolation (loses structured data)
+_logger.LogInformation("User " + userId + " logged in");
+_logger.LogInformation($"User {userId} logged in");
 ```
-
-## Code Quality Checklist
-
-Before marking work complete:
-- [ ] All public APIs have XML documentation comments
-- [ ] Async methods end with `Async` suffix
-- [ ] All async methods accept `CancellationToken`
-- [ ] Constructor parameters validated (null checks)
-- [ ] Proper use of `readonly` for fields
-- [ ] No `async void` except for event handlers
-- [ ] Proper error handling with logging
-- [ ] Input validation using FluentValidation or Data Annotations
-- [ ] No hardcoded connection strings or secrets
-- [ ] Using `ILogger<T>` for structured logging
-- [ ] DTOs used for API contracts (not entities)
-- [ ] Repository pattern for data access
-
-## Common Anti-Patterns to Avoid
-
-1. **Service Locator** - Use constructor injection instead
-2. **Async void** - Always return Task
-3. **Blocking async calls** - Never use `.Result` or `.Wait()`
-4. **Fat controllers** - Move logic to services
-5. **Exposing entities** - Use DTOs for API responses
-6. **Hardcoded config** - Use IOptions pattern
-7. **Catching generic Exception** - Catch specific exceptions
-8. **Not using CancellationToken** - Always propagate tokens
